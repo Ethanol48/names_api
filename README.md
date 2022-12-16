@@ -1,1 +1,1 @@
-This repo is a fork of thm/uninames. 
+This repo is a fork of thm/uninames api repo. 

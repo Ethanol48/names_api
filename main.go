@@ -26,6 +26,7 @@ func getFromCountry(r map[string]body, c string, g string) (name, error) {
 	// c = is the Country string, Spain, Saudi Arabia, Germany ...
 	// g = gender of desired name
 	// r = response from getWholeJson
+	rand.Seed(time.Now().UnixNano())
 
 	switch g {
 	case "Male":
@@ -78,6 +79,7 @@ func getNameFromCountry(w http.ResponseWriter, r *http.Request) {
 }
 
 func randomName(w http.ResponseWriter, r *http.Request) {
+	rand.Seed(time.Now().UnixNano())
 
 	resultado := getWholeJson("names_new.json")
 
@@ -122,8 +124,6 @@ func randomName(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
-	rand.Seed(time.Now().UnixNano())
 
 	r := mux.NewRouter()
 

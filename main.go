@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type body struct {
@@ -49,7 +51,7 @@ func getFromCountry(r map[string]body, c string, g string) (name, error) {
 func getWholeJson(path string) map[string]body {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Fatal("Error during Unmarshal(): ", err)
+		log.Fatal("Error during reading json file: ", err)
 	}
 
 	var payload map[string]body
@@ -62,15 +64,71 @@ func getWholeJson(path string) map[string]body {
 	return payload
 }
 
+func getNameFromCountry(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	c := vars["country"]
+	g := vars["gender"]
+
+	result, _ := getFromCountry(getWholeJson("names_new.json"), c, g)
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func randomName(w http.ResponseWriter, r *http.Request) {
+
+	resultado := getWholeJson("names_new.json")
+
+	keys := make([]string, 0, len(resultado))
+	for k := range resultado {
+		keys = append(keys, k)
+	}
+
+	var gdr string
+
+	tmp := rand.Intn(3)
+	if tmp >= 2 {
+		gdr = "Male"
+	} else {
+		gdr = "Female"
+	}
+	// random number to select the country
+	vc := rand.Intn(len(keys) - 1)
+
+	var nm string
+	if gdr == "Male" {
+		vname := rand.Intn(len(resultado[keys[vc]].Male) - 1)
+		nm = resultado[keys[vc]].Male[vname]
+
+	} else if gdr == "Female" {
+		vname := rand.Intn(len(resultado[keys[vc]].Female) - 1)
+		nm = resultado[keys[vc]].Female[vname]
+	}
+
+	// random number to select the country
+	vcnm := rand.Intn(len(keys) - 1)
+
+	// random number to select a Surname
+	vsnm := rand.Intn(len(resultado[keys[vcnm]].Surnames) - 1)
+	snm := resultado[keys[vcnm]].Surnames[vsnm]
+
+	result := name{Name: nm, Surname: snm}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
 func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	resultado := getWholeJson("names_new.json")
-	fmt.Println(getFromCountry(resultado, "Germany", "Male"))
+	r := mux.NewRouter()
 
-	// fmt.Println(resultado["Spain"].Male)
-
-	// fmt.Println(payload["Spain"])
+	r.HandleFunc("/name/{country}/{gender}", getNameFromCountry)
+	r.HandleFunc("/random", randomName)
+	http.ListenAndServe(":4000", r)
 
 }

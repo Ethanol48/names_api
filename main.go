@@ -20,6 +20,24 @@ type body struct {
 type name struct {
 	Name    string
 	Surname string
+	prueba  string
+}
+
+type errorMessage struct {
+	Message string
+}
+
+func isInArray(alpha []string, str string) bool {
+
+	// iterate using the for loop
+	for i := 0; i < len(alpha); i++ {
+		// check
+		if alpha[i] == str {
+			// return true
+			return true
+		}
+	}
+	return false
 }
 
 func getFromCountry(r map[string]body, c string, g string) (name, error) {
@@ -29,7 +47,7 @@ func getFromCountry(r map[string]body, c string, g string) (name, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	switch g {
-	case "Male":
+	case "Male", "male":
 		vn := rand.Intn(len(r[c].Male) - 1)
 		vsn := rand.Intn(len(r[c].Surnames) - 1)
 
@@ -37,16 +55,17 @@ func getFromCountry(r map[string]body, c string, g string) (name, error) {
 
 		return result, nil
 
-	case "Female":
+	case "Female", "female":
 		vn := rand.Intn(len(r[c].Female) - 1)
 		vsn := rand.Intn(len(r[c].Surnames) - 1)
 
 		result := name{Name: r[c].Female[vn], Surname: r[c].Surnames[vsn]}
 
 		return result, nil
-	}
 
-	return name{}, nil
+	default:
+		return name{}, nil
+	}
 }
 
 func getWholeJson(path string) map[string]body {
@@ -67,15 +86,105 @@ func getWholeJson(path string) map[string]body {
 
 func getNameFromCountry(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Add("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	c := vars["country"]
 	g := vars["gender"]
 
-	result, _ := getFromCountry(getWholeJson("names_new.json"), c, g)
+	resultado := getWholeJson("names_new.json")
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	keys := make([]string, 0, len(resultado))
+	for k := range resultado {
+		keys = append(keys, k)
+	}
+
+	checkcountry := isInArray(keys, c)
+	if checkcountry == false {
+
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(errorMessage{
+			Message: "Error, the country name wasn't right, did you Capitalize it??",
+		})
+
+	} else {
+		result, _ := getFromCountry(getWholeJson("names_new.json"), c, g)
+
+		empty := name{}
+		if result == empty {
+
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(errorMessage{
+				Message: "Error, the gender wasn't right, the genders are 'Male' or 'Female'",
+			})
+
+		} else {
+
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(result)
+		}
+	}
+}
+
+func randomGender(w http.ResponseWriter, r *http.Request) {
+	rand.Seed(time.Now().UnixNano())
+
+	resultado := getWholeJson("names_new.json")
+
+	keys := make([]string, 0, len(resultado))
+	for k := range resultado {
+		keys = append(keys, k)
+	}
+
+	vars := mux.Vars(r)
+	gdr := vars["gender"]
+
+	// random number to select the country
+	vc := rand.Intn(len(keys) - 1)
+
+	var nm string
+
+	if gdr == "Male" || gdr == "male" {
+		vname := rand.Intn(len(resultado[keys[vc]].Male) - 1)
+		nm = resultado[keys[vc]].Male[vname]
+
+		// random number to select the country
+		vcnm := rand.Intn(len(keys) - 1)
+
+		// random number to select a Surname
+		vsnm := rand.Intn(len(resultado[keys[vcnm]].Surnames) - 1)
+		snm := resultado[keys[vcnm]].Surnames[vsnm]
+
+		result := name{Name: nm, Surname: snm, prueba: gdr}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
+
+	} else if gdr == "Female" || gdr == "female" {
+		vname := rand.Intn(len(resultado[keys[vc]].Female) - 1)
+		nm = resultado[keys[vc]].Female[vname]
+
+		// random number to select the country
+		vcnm := rand.Intn(len(keys) - 1)
+
+		// random number to select a Surname
+		vsnm := rand.Intn(len(resultado[keys[vcnm]].Surnames) - 1)
+		snm := resultado[keys[vcnm]].Surnames[vsnm]
+
+		result := name{Name: nm, Surname: snm, prueba: gdr}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
+
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(errorMessage{
+			Message: "Error, the gender wasn't right, the genders are 'Male' or 'Female'",
+		})
+	}
+
 }
 
 func randomName(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +237,7 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/name/{country}/{gender}", getNameFromCountry)
+	r.HandleFunc("/random/{gender}", randomGender)
 	r.HandleFunc("/random", randomName)
 	http.ListenAndServe(":4000", r)
 

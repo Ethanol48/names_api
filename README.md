@@ -38,6 +38,6 @@ An example of the output:
 ```
 you can get pretty crazy with it.
 
-I created the python file to reformat the json, I found that working with the format that it got was a little difficult, so I made a simple script so if you wanted to contribute for the names make the pull request to the "names.json" and the script will do the rest
+I created the python file to reformat the json, I found that working with the format that it got was a little difficult, so I made a simple script to change it, if you wanted to contribute for the names make the pull request to the "names.json" and the script will do the rest
 
 *This repo is a fork of thm/uninames*

@@ -100,7 +100,7 @@ func getNameFromCountry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	checkcountry := isInArray(keys, c)
-	if checkcountry == false {
+	if !checkcountry {
 
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(errorMessage{
